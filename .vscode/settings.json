@@ -1,0 +1,20 @@
+{
+    "python-envs.defaultEnvManager": "ms-python.python:system",
+    "workbench.editorAssociations": {
+        "*.copilotmd": "vscode.markdown.preview.editor",
+        "*.parquet": "duckdb.dataFileViewer",
+        "*.csv": "duckdb.dataFileViewer",
+        "*.tsv": "duckdb.dataFileViewer",
+        "*.xlsx": "duckdb.dataFileViewer"
+    },
+    "duckdb.extensions.autoLoad": [],
+    "duckdb.defaultDatabase": "agData",
+    "duckdb.databases": [
+        {
+            "alias": "agData",
+            "type": "file",
+            "path": "/Users/sethsmac/Desktop/FSRIInternship/USDA_Data_Pipeline/agData.duckdb",
+            "attached": true
+        }
+    ]
+}
