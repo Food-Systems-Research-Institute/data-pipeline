@@ -15,6 +15,14 @@ Set up environment with uv ([uv installation](https://github.com/Food-Systems-Re
 uv sync
 ```
 
+## Running
+
+Get a NASS API Key for free at https://quickstats.nass.usda.gov/api. Add to `.env` as `NASS_API_KEY`. Then:
+
+```sh
+uv run python src/api/collect_nass_economics.py
+```
+
 ## Contributions
 
 Format with [Ruff](https://astral.sh/ruff), lint with [ty](https://docs.astral.sh/ty/).

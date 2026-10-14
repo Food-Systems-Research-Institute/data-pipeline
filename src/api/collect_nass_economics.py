@@ -8,13 +8,11 @@ import pandas as pd
 import requests
 from dotenv import load_dotenv
 
-# Get API key from .env file
-PROJECT_DIR = Path(__file__).resolve().parent
+from utils import find_project_root
 
+PROJECT_DIR = find_project_root()
 load_dotenv(PROJECT_DIR / ".env")
-
 API_KEY = os.getenv("NASS_API_KEY")
-
 
 if API_KEY is None:
     print("API key not found")
