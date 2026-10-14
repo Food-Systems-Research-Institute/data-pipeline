@@ -1,7 +1,6 @@
 # NASS API Data Collection Script
 
 import os
-from pathlib import Path
 
 import duckdb as db
 import pandas as pd

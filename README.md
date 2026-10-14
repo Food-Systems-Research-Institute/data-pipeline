@@ -23,6 +23,21 @@ Get a NASS API Key for free at https://quickstats.nass.usda.gov/api. Add to `.en
 uv run python src/api/collect_nass_economics.py
 ```
 
+## DuckDB Schema
+
+```sh
+duckdb agData.duckdb
+
+# See all tables
+.tables
+
+# Check schema
+.schema
+
+# Describe a specific table (schema.tablename)
+DESCRIBE fips.fips_key;
+```
+
 ## Contributions
 
 Format with [Ruff](https://astral.sh/ruff), lint with [ty](https://docs.astral.sh/ty/).
