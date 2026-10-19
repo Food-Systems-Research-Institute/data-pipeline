@@ -15,6 +15,18 @@ Set up environment with uv ([uv installation](https://github.com/Food-Systems-Re
 uv sync
 ```
 
+### Git LFS
+
+Using Git large file storage to hold db files. You can find [Git LFS installation here](https://git-lfs.com/), and [GitHub setup here](https://docs.github.com/en/repositories/working-with-files/managing-large-files/configuring-git-large-file-storage).
+
+```sh
+# start tracking all db files
+git lfs track "*.db"
+git add agData.duckdb
+git commit -m "add db"
+git push
+```
+
 ## Running
 
 Get a NASS API Key for free at https://quickstats.nass.usda.gov/api. Add to `.env` as `NASS_API_KEY`. Then:
