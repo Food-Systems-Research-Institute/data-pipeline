@@ -9,7 +9,7 @@ import requests
 from dotenv import load_dotenv
 
 # Get API key from .env file
-PROJECT_DIR = Path(__file__).resolve().parent
+PROJECT_DIR = Path(__file__).resolve().parents[2]
 
 load_dotenv(PROJECT_DIR / ".env")
 
@@ -23,6 +23,7 @@ else:
 
 param_url = "https://quickstats.nass.usda.gov/api/get_param_values/"
 get_url = "https://quickstats.nass.usda.gov/api/api_GET/"
+count_url = "https://quickstats.nass.usda.gov/api/get_counts/"  
 
 
 # gets the categories for the descriptive parameters as a list
@@ -36,73 +37,99 @@ def getParams(param_url, param):
     print("Response preview:", param_response.text[:1000])
     return param_response.json()[param]
 
-
-# Get economics data from NASS API for each group within the ECONOMICS sector
-def get_economics_data(get_url, group):
+def build_request_and_get_record_count(sector, group, year, agg_level_desc=None, state_name=None, county_name=None, zip_5=None):
     params = {
-        "key": API_KEY,
-        "format": "JSON",
-        "source_desc": "CENSUS",
-        "sector_desc": "ECONOMICS",
-        "group_desc": group,
-        "agg_level_desc": "STATE",
-        "state_alpha": "VT",
-    }
+                "key": API_KEY,
+                "format": "JSON",
+                "source_desc": "CENSUS",
+                "sector_desc": sector,
+                "group_desc": group,
+                "year": year,
+            }
+    if agg_level_desc is not None:
+        params["agg_level_desc"] = agg_level_desc
 
+    if state_name is not None:
+        params["state_name"] = state_name
+
+    if county_name is not None:
+        params["county_name"] = county_name
+
+    if zip_5 is not None:
+        params["zip_5"] = zip_5
+    
+    response = requests.get(count_url,
+                            params = params,
+                            timeout=60)
+
+
+    table_parts = [sector, group]
+
+    if agg_level_desc:
+        table_parts.append(agg_level_desc)
+    if state_name:
+        table_parts.append(state_name)
+    if county_name:
+        table_parts.append(county_name)
+    if zip_5:
+        table_parts.append(zip_5)
+
+    table_parts.append(str(year))
+    table_name = "_".join(table_parts).replace(" ", "_").lower()
+
+    return int(response.json()["count"]), params, table_name
+
+
+
+# Get raw data from NASS API based on the specified parameters
+def get_NASS_data(get_url, row_count, params):
+    if row_count > 50.000:
+        print(f"Request to large({row_count} rows), try further filtering")
+        return None
     response = requests.get(get_url, params=params, timeout=60)
     print("Status code:", response.status_code)
     print("Response preview:", response.text[:1000])
 
+
     if response.status_code != 200:
-        print(f"Request failed for {group}: {response.text[:500]}")
+        print(f"Request failed for {table_name}: {response.text[:500]}")
         return pd.DataFrame()
 
-    econ_data = response.json()
+    raw_data = response.json()
 
-    if "data" not in econ_data:
-        print(f"No data field for {group}: {econ_data}")
+    if "data" not in raw_data:
+        print(f"No data field for {table_name}: {raw_data}")
         return pd.DataFrame()
 
-    return pd.DataFrame(econ_data["data"])
+    return pd.DataFrame(raw_data["data"])
 
 
-def build_economics_table():
-    econ_groups = [
-        "ENERGY",
-        "EXPENSES",
-        "FARMS & LAND & ASSETS",
-        "INCOME",
-        "IRRIGATION",
-        "PRICES PAID",
-    ]
-
+def build_NASS_table(get_url, params, table_name, row_count):
+    raw_data = get_NASS_data(get_url, row_count, params)
+    
+    if raw_data is None:
+            print("build table failed, request was too large")
+            return None
     conn = db.connect("agData.duckdb")
     conn.execute("""
-            CREATE SCHEMA IF NOT EXISTS economics
+            CREATE SCHEMA IF NOT EXISTS raw_nass
             """)
 
-    for group in econ_groups:
-        econ_data = get_economics_data(get_url, group)
+    
 
-        if econ_data.empty:
-            print(f"No data returned for {group}")
-            continue
 
-        table_name = group.lower().replace(" & ", "_").replace(" ", "_")
-
-        conn.register("econ_data", econ_data)
-
-        conn.execute(f"""
-        CREATE OR REPLACE TABLE economics.{table_name} AS
-        SELECT * FROM econ_data
+    conn.execute(f"""
+        CREATE OR REPLACE TABLE raw_nass.{table_name} AS
+        SELECT * FROM raw_data
         """)
 
-        conn.unregister("econ_data")
 
-        print(f"Loaded {len(econ_data)} rows into economics.{table_name}")
+    print(f"Loaded {len(raw_data)} rows into raw_nass.{table_name}")
 
     conn.close()
 
 
 if __name__ == "__main__":
-    build_economics_table()
+    count, params, table_name = build_request_and_get_record_count(sector="ECONOMICS", group="EXPENSES", year = 2022)
+    print(count, params, table_name)
+    build_NASS_table(get_url, params, table_name, count)

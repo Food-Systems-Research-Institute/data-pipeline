@@ -1,9 +1,7 @@
-import duckdb as db
-import re
-from io import StringIO
-
 import tkinter as tk
 from tkinter import filedialog
+
+import duckdb as db
 
 
 def get_file_path_and_table_name():

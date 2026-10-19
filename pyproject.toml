@@ -11,3 +11,8 @@ dependencies = [
     "requests>=2.34.2",
 ]
 license = "MIT"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.17.0",
+]
