@@ -37,7 +37,7 @@ def load_fips_key(db_path: str = "agData.duckdb"):
 
     csv_path = Path(__file__).parent / "reference" / "fips_key.csv"
     conn.execute(
-        "CREATE OR REPLACE TABLE fips.fips_key AS SELECT * FROM read_csv_auto($path)",
+        "CREATE OR REPLACE TABLE fips.fips_key AS SELECT * FROM read_csv_auto($path, header = true, nullstr = 'NA', types = {'fips': 'VARCHAR'})",
         {"path": str(csv_path)},
     )
 
@@ -50,7 +50,7 @@ def fips_key() -> pd.DataFrame:
     import pandas as pd
 
     csv_path = Path(__file__).parent / "reference" / "fips_key.csv"
-    df = pd.read_csv(csv_path)
+    df = pd.read_csv(csv_path, dtype={"fips": str})
     df.columns = ["idx", "fips", "county_name", "state_name", "state_code"]
 
     # Add state codes to all counties as well as states (counties had NA state code)
