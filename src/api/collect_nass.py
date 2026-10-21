@@ -35,7 +35,7 @@ def getParams(param_url, param):
 
     return param_response.json()[param]
 
-def build_request_and_get_record_count(sector, year=None, group=None, agg_level_desc=None, state_name=None, county_name=None, zip_5=None):
+def build_request_and_get_record_count(sector, **kwargs):
     params = {
                 "key": API_KEY,
                 "format": "JSON",
@@ -43,47 +43,19 @@ def build_request_and_get_record_count(sector, year=None, group=None, agg_level_
                 "sector_desc": sector,
             }
 
-    if year is not None:
-            params['year'] = year
+    table_parts = [sector]
 
-    if group is not None:
-        params['group_desc'] = group
+    for key, value in kwargs.items():
+        params[key] = value
+        table_parts.append(str(value))
 
-    if agg_level_desc is not None:
-        params["agg_level_desc"] = agg_level_desc
-
-    if state_name is not None:
-        params["state_name"] = state_name
-
-    if county_name is not None:
-        params["county_name"] = county_name
-
-    if zip_5 is not None:
-        params["zip_5"] = zip_5
-    
     response = requests.get(count_url,
                             params = params,
                             timeout=60)
 
-    table_parts = [sector]
-
-    if group:
-        table_parts.append(group)
-    if agg_level_desc:
-        table_parts.append(agg_level_desc)
-    if state_name:
-        table_parts.append(state_name)
-    if county_name:
-        table_parts.append(county_name)
-    if zip_5:
-        table_parts.append(zip_5)
-    if year:
-        table_parts.append(str(year))
-
     table_name = "_".join(table_parts).replace(" ", "_").lower()
 
     return int(response.json()["count"]), params, table_name
-
 
 
 # Get raw data from NASS API based on the specified parameters
@@ -93,7 +65,6 @@ def get_NASS_data(get_url, row_count, params):
         return None
     response = requests.get(get_url, params=params, timeout=60)
     print("Status code:", response.status_code)
-    print("Response preview:", response.text[:1000])
 
 
     if response.status_code != 200:
@@ -136,7 +107,7 @@ def build_NASS_table(get_url, params, table_name, row_count):
 
 
 if __name__ == "__main__":
-    '''
+    
     northeast_states = ["CONNECTICUT", 
                         "MASSACHUSETTS", 
                         "NEW HAMPSHIRE", 
@@ -149,11 +120,11 @@ if __name__ == "__main__":
     
     for year in [2002,2007,2012,2017,2022]:
         for state in northeast_states:
-            count, params, table_name = build_request_and_get_record_count(year = year, agg_level_desc="STATE", state_name=state)
+            count, params, table_name = build_request_and_get_record_count(sector="ECONOMICS", year = year, agg_level_desc="STATE", state_name=state)
+            build_NASS_table(get_url, params, table_name, count)
             time.sleep(1)
-    print(count, params, table_name)
+    '''
+    count, params, table_name = build_request_and_get_record_count(sector="ECONOMICS", year = 2022, agg_level_desc="STATE", state_name="VERMONT")
     build_NASS_table(get_url, params, table_name, count)
     '''
-    count, params, table_name = build_request_and_get_record_count(group = "ECONOMICS", year = 2022, agg_level_desc="STATE", state_name="VERMONT")
-    build_NASS_table(get_url, params, table_name, count)
 
