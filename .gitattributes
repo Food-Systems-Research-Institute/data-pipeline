@@ -1,1 +1,2 @@
 agData.duckdb filter=lfs diff=lfs merge=lfs -text
+*.duckdb filter=lfs diff=lfs merge=lfs -text

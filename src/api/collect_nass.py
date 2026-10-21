@@ -1,11 +1,11 @@
 # NASS API Data Collection Script
-
 import os
 
 import duckdb as db
 import pandas as pd
 import requests
 from dotenv import load_dotenv
+import time
 
 from utils import find_project_root
 
@@ -32,17 +32,23 @@ def getParams(param_url, param):
 
     print("Status code:", param_response.status_code)
     print("Response preview:", param_response.text[:1000])
+
     return param_response.json()[param]
 
-def build_request_and_get_record_count(sector, group, year, agg_level_desc=None, state_name=None, county_name=None, zip_5=None):
+def build_request_and_get_record_count(sector, year=None, group=None, agg_level_desc=None, state_name=None, county_name=None, zip_5=None):
     params = {
                 "key": API_KEY,
                 "format": "JSON",
                 "source_desc": "CENSUS",
                 "sector_desc": sector,
-                "group_desc": group,
-                "year": year,
             }
+
+    if year is not None:
+            params['year'] = year
+
+    if group is not None:
+        params['group_desc'] = group
+
     if agg_level_desc is not None:
         params["agg_level_desc"] = agg_level_desc
 
@@ -59,9 +65,10 @@ def build_request_and_get_record_count(sector, group, year, agg_level_desc=None,
                             params = params,
                             timeout=60)
 
+    table_parts = [sector]
 
-    table_parts = [sector, group]
-
+    if group:
+        table_parts.append(group)
     if agg_level_desc:
         table_parts.append(agg_level_desc)
     if state_name:
@@ -70,8 +77,9 @@ def build_request_and_get_record_count(sector, group, year, agg_level_desc=None,
         table_parts.append(county_name)
     if zip_5:
         table_parts.append(zip_5)
+    if year:
+        table_parts.append(str(year))
 
-    table_parts.append(str(year))
     table_name = "_".join(table_parts).replace(" ", "_").lower()
 
     return int(response.json()["count"]), params, table_name
@@ -80,7 +88,7 @@ def build_request_and_get_record_count(sector, group, year, agg_level_desc=None,
 
 # Get raw data from NASS API based on the specified parameters
 def get_NASS_data(get_url, row_count, params):
-    if row_count > 50.000:
+    if row_count > 50000:
         print(f"Request to large({row_count} rows), try further filtering")
         return None
     response = requests.get(get_url, params=params, timeout=60)
@@ -107,6 +115,7 @@ def build_NASS_table(get_url, params, table_name, row_count):
     if raw_data is None:
             print("build table failed, request was too large")
             return None
+    
     conn = db.connect("agData.duckdb")
     conn.execute("""
             CREATE SCHEMA IF NOT EXISTS raw_nass
@@ -127,6 +136,24 @@ def build_NASS_table(get_url, params, table_name, row_count):
 
 
 if __name__ == "__main__":
-    count, params, table_name = build_request_and_get_record_count(sector="ECONOMICS", group="EXPENSES", year = 2022)
+    '''
+    northeast_states = ["CONNECTICUT", 
+                        "MASSACHUSETTS", 
+                        "NEW HAMPSHIRE", 
+                        "VERMONT", 
+                        "MAINE", 
+                        "NEW YORK", 
+                        "PENNSYLVANIA", 
+                        "NEW JERSEY", 
+                        "RHODE ISLAND"]
+    
+    for year in [2002,2007,2012,2017,2022]:
+        for state in northeast_states:
+            count, params, table_name = build_request_and_get_record_count(year = year, agg_level_desc="STATE", state_name=state)
+            time.sleep(1)
     print(count, params, table_name)
     build_NASS_table(get_url, params, table_name, count)
+    '''
+    count, params, table_name = build_request_and_get_record_count(group = "ECONOMICS", year = 2022, agg_level_desc="STATE", state_name="VERMONT")
+    build_NASS_table(get_url, params, table_name, count)
+
