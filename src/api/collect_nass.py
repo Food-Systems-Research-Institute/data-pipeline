@@ -35,6 +35,7 @@ def getParams(param_url, param):
 
     return param_response.json()[param]
 
+
 def build_request_and_get_record_count(sector, **kwargs):
     params = {
                 "key": API_KEY,
@@ -63,9 +64,9 @@ def get_NASS_data(get_url, row_count, params):
     if row_count > 50000:
         print(f"Request to large({row_count} rows), try further filtering")
         return None
+    
     response = requests.get(get_url, params=params, timeout=60)
     print("Status code:", response.status_code)
-
 
     if response.status_code != 200:
         print(f"Request failed for {table_name}: {response.text[:500]}")
@@ -92,14 +93,10 @@ def build_NASS_table(get_url, params, table_name, row_count):
             CREATE SCHEMA IF NOT EXISTS raw_nass
             """)
 
-    
-
-
     conn.execute(f"""
         CREATE OR REPLACE TABLE raw_nass.{table_name} AS
         SELECT * FROM raw_data
         """)
-
 
     print(f"Loaded {len(raw_data)} rows into raw_nass.{table_name}")
 
@@ -107,7 +104,6 @@ def build_NASS_table(get_url, params, table_name, row_count):
 
 
 if __name__ == "__main__":
-    
     northeast_states = ["CONNECTICUT", 
                         "MASSACHUSETTS", 
                         "NEW HAMPSHIRE", 
@@ -122,7 +118,8 @@ if __name__ == "__main__":
         for state in northeast_states:
             count, params, table_name = build_request_and_get_record_count(sector="ECONOMICS", year = year, agg_level_desc="STATE", state_name=state)
             build_NASS_table(get_url, params, table_name, count)
-            time.sleep(1)
+            time.sleep(.5)
+
     '''
     count, params, table_name = build_request_and_get_record_count(sector="ECONOMICS", year = 2022, agg_level_desc="STATE", state_name="VERMONT")
     build_NASS_table(get_url, params, table_name, count)
