@@ -13,9 +13,11 @@ description = "USDA NASS agricultural data collection pipeline into DuckDB"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "bs4>=0.0.2",
     "duckdb>=1.5.6",
     "pandas>=3.0.6",
     "pyarrow>=26.0.0",
+    "pytest>=9.2.0",
     "python-dotenv>=1.2.4",
     "requests>=2.34.2",
 ]

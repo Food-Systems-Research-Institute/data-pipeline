@@ -28,16 +28,44 @@ Params = dict[str, str | int | None]
 
 # gets the categories for the descriptive parameters as a list
 # (ex. param is source_desc, output is ['ANIMALS & PRODUCTS', 'CROPS', 'DEMOGRAPHICS', 'ECONOMICS', 'ENVIRONMENTAL'])
-def getParams(param_url: str, param: str) -> list[str]:
-    param_params = {"key": API_KEY, "param": param}
+def getParams(param_url: str, key_word: str) -> list[str]:
+    param_params = {"key": API_KEY, "param": key_word}
 
     param_response = requests.get(param_url, params=param_params, timeout=60)
 
     print("Status code:", param_response.status_code)
     print("Response preview:", param_response.text[:1000])
 
-    return param_response.json()[param]
+    return param_response.json()[key_word]
 
+
+def build_request(sector: str, **kwargs: str | int) -> Params:
+    params: Params = {
+            "key": API_KEY,
+            "format": "JSON",
+            "source_desc": "CENSUS",
+            "sector_desc": sector,
+            }
+
+    for key, value in kwargs.items():
+            params[key] = value
+
+    return params
+
+
+def get_record_count(params: dict) -> int:
+    response = requests.get(count_url, params=params, timeout=60)
+
+    return int(response.json()["count"])
+    
+
+def get_table_name(parmas: dict) -> str:
+    table_parts = list(str(params.values()))[2:]
+    
+    table_name = "_".join(table_parts).replace(" ", "_").lower()
+    
+    return table_name
+        
 
 def build_request_and_get_record_count(
     sector: str, **kwargs: str | int
@@ -91,6 +119,8 @@ def build_NASS_table(
 ) -> None:
     raw_data = get_NASS_data(get_url, row_count, params, table_name)
 
+    sector = params["sector_desc"]
+
     if raw_data is None:
         print("build table failed, request was too large")
         return
@@ -101,32 +131,47 @@ def build_NASS_table(
             """)
 
     conn.execute(f"""
-        CREATE OR REPLACE TABLE raw_nass.{table_name} AS
+                CREATE SCHEMA IF NOT EXISTS raw_nass.{sector}
+                """)
+
+    conn.execute(f"""
+        CREATE OR REPLACE TABLE raw_nass.{sector}.{table_name} AS
         SELECT * FROM raw_data
         """)
 
-    print(f"Loaded {len(raw_data)} rows into raw_nass.{table_name}")
+    print(f"Loaded {len(raw_data)} rows into raw_nass.{sector}.{table_name}")
 
     conn.close()
 
 
 if __name__ == "__main__":
-    northeast_states = [
-        "CONNECTICUT",
-        "MASSACHUSETTS",
-        "NEW HAMPSHIRE",
-        "VERMONT",
-        "MAINE",
-        "NEW YORK",
-        "PENNSYLVANIA",
-        "NEW JERSEY",
-        "RHODE ISLAND",
-    ]
+    params = build_request(
+                    sector="ECONOMICS", year=2002, agg_level_desc="STATE", state_name="VERMONT"
+                )
+    
+    count = get_record_count(params)
 
-    for year in [2002, 2007, 2012, 2017, 2022]:
-        for state in northeast_states:
-            count, params, table_name = build_request_and_get_record_count(
-                sector="ECONOMICS", year=year, agg_level_desc="STATE", state_name=state
-            )
-            build_NASS_table(get_url, params, table_name, count)
-            time.sleep(1)
+    table_name = get_table_name(params)
+
+    print(get_NASS_data(get_url, count, params, table_name))
+
+    
+    # northeast_states = [
+    #     "CONNECTICUT",
+    #     "MASSACHUSETTS",
+    #     "NEW HAMPSHIRE",
+    #     "VERMONT",
+    #     "MAINE",
+    #     "NEW YORK",
+    #     "PENNSYLVANIA",
+    #     "NEW JERSEY",
+    #     "RHODE ISLAND",
+    # ]
+
+    # for year in [2002, 2007, 2012, 2017, 2022]:
+    #     for state in northeast_states:
+    #         count, params, table_name = build_request_and_get_record_count(
+    #             sector="ECONOMICS", year=year, agg_level_desc="STATE", state_name=state
+    #         )
+    #         build_NASS_table(get_url, params, table_name, count)
+    #         time.sleep(.5)
