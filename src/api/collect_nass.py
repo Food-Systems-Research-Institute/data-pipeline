@@ -67,28 +67,6 @@ def get_table_name(parmas: dict) -> str:
     return table_name
         
 
-def build_request_and_get_record_count(
-    sector: str, **kwargs: str | int
-) -> tuple[int, Params, str]:
-    params: Params = {
-        "key": API_KEY,
-        "format": "JSON",
-        "source_desc": "CENSUS",
-        "sector_desc": sector,
-    }
-
-    table_parts = [sector]
-
-    for key, value in kwargs.items():
-        params[key] = value
-        table_parts.append(str(value))
-
-    response = requests.get(count_url, params=params, timeout=60)
-
-    table_name = "_".join(table_parts).replace(" ", "_").lower()
-
-    return int(response.json()["count"]), params, table_name
-
 
 # Get raw data from NASS API based on the specified parameters
 def get_NASS_data(

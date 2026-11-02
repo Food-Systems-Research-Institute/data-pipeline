@@ -8,6 +8,5 @@ def union_nass_tables(sector: str, agg_level: str):
 
     conn.execute("""
                 SELECT * FROM 
-        
-    
+
     """)
