@@ -39,11 +39,11 @@ def getParams(param_url: str, key_word: str) -> list[str]:
     return param_response.json()[key_word]
 
 
-def build_request(sector: str, **kwargs: str | int) -> Params:
+def build_request(source: str, sector: str, **kwargs: str | int) -> Params:
     params: Params = {
             "key": API_KEY,
             "format": "JSON",
-            "source_desc": "CENSUS",
+            "source_desc": source,
             "sector_desc": sector,
             }
 
@@ -83,25 +83,25 @@ def get_NASS_data(
 
     if response.status_code != 200:
         print(f"Request failed for {table_name}: {response.text[:500]}")
-        return pd.DataFrame()
+        return None
 
     raw_data = response.json()
 
     if "data" not in raw_data:
         print(f"No data field for {table_name}: {raw_data}")
-        return pd.DataFrame()
+        return None
 
     return pd.DataFrame(raw_data["data"])
 
 
-def build_NASS_tables(
+def build_NASS_table(
     get_url: str, params: Params, table_name: str, row_count: int
 ) -> None:
     raw_data = get_NASS_data(get_url, row_count, params, table_name)
 
 
     if raw_data is None:
-        print("build table failed, request was too large")
+        print("build table failed, request was too large or invalid request")
         return
 
     conn = db.connect("agData.duckdb")
@@ -166,6 +166,8 @@ def combine_nass_tables(
 
 
 if __name__ == "__main__":
+
+
     northeast_states = [
         "CONNECTICUT",
         "MASSACHUSETTS",
@@ -178,18 +180,19 @@ if __name__ == "__main__":
         "RHODE ISLAND",
     ]
 
-    # for year in [2002, 2007, 2012, 2017, 2022]:
-    #     for state in northeast_states:
-    #         params = build_request(
-    #                             sector="ECONOMICS", 
-    #                             year=year, 
-    #                             agg_level_desc="STATE", 
-    #                             state_name=state
-    #                         )
-    #         count = get_record_count(count_url, params)
-    #         table_name = get_table_name(params)
+    for year in range(1997, 2025 + 1):
+        for state in northeast_states:
+            params = build_request(
+                                source="CENSUS",
+                                sector="ECONOMICS", 
+                                year=year, 
+                                agg_level_desc="STATE", 
+                                state_name=state
+                            )
+            count = get_record_count(count_url, params)
+            table_name = get_table_name(params)
             
-    #         build_NASS_tables(get_url, params, table_name, count)
-    #         time.sleep(.5)
+            build_NASS_table(get_url, params, table_name, count)
+            time.sleep(.5)
 
-    combine_nass_tables(name_prefix="census_economics")
+    #combine_nass_tables(name_prefix="census_economics")

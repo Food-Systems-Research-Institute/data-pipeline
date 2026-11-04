@@ -5,5 +5,5 @@ def main():
 
 
 if __name__ == "__main__":
-    see_tables("raw_nass", show_columns=True)
+    see_tables("raw_nass", show_columns=False)
     main()
