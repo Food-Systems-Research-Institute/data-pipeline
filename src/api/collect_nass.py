@@ -60,11 +60,13 @@ def get_record_count(count_url, params: dict) -> int:
     
 
 def get_table_name(params: dict) -> str:
-    table_parts = list(str(params.values()))[2:]
-    
-    table_name = "_".join(table_parts).replace(" ", "_").lower()
-    
-    return table_name
+    parts = [
+        params["source_desc"],
+        params["sector_desc"],
+        params.get("year"),
+        params.get("state_name"),
+    ]
+    return "_".join(str(p) for p in parts if p).replace(" ", "_").lower()
         
 
 
@@ -92,12 +94,11 @@ def get_NASS_data(
     return pd.DataFrame(raw_data["data"])
 
 
-def build_NASS_table(
+def build_NASS_tables(
     get_url: str, params: Params, table_name: str, row_count: int
 ) -> None:
     raw_data = get_NASS_data(get_url, row_count, params, table_name)
 
-    sector = params["sector_desc"]
 
     if raw_data is None:
         print("build table failed, request was too large")
@@ -109,31 +110,62 @@ def build_NASS_table(
             """)
 
     conn.execute(f"""
-                CREATE SCHEMA IF NOT EXISTS raw_nass.{sector}
-                """)
-
-    conn.execute(f"""
-        CREATE OR REPLACE TABLE raw_nass.{sector}.{table_name} AS
+        CREATE OR REPLACE TABLE raw_nass.{table_name} AS
         SELECT * FROM raw_data
         """)
 
-    print(f"Loaded {len(raw_data)} rows into raw_nass.{sector}.{table_name}")
+    print(f"Loaded {len(raw_data)} rows into raw_nass.{table_name}")
+
+    conn.close()
+
+
+def combine_nass_tables(
+    source_schema: str = "raw_nass",
+    target: str = "raw_nass_combined.nass_all",
+    name_prefix: str = "",
+    drop_sources: bool = False,
+    db_path: str = "agData.duckdb",
+) -> None:
+    conn = db.connect(db_path)
+
+    target_schema = target.split(".")[0]
+    conn.execute(f"CREATE SCHEMA IF NOT EXISTS {target_schema}")
+
+    tables = conn.execute(
+        """
+        SELECT table_name
+        FROM duckdb_tables()
+        WHERE schema_name = ? AND table_name LIKE ?
+        ORDER BY table_name
+        """,
+        [source_schema, f"{name_prefix}%"],
+    ).fetchall()
+    tables = [t[0] for t in tables]
+
+    if not tables:
+        conn.close()
+        raise RuntimeError(f"No tables found in {source_schema}")
+
+    selects = [
+        f"SELECT *, '{t}' AS source_table FROM {source_schema}.\"{t}\""
+        for t in tables
+    ]
+    query = "\nUNION ALL BY NAME\n".join(selects)
+
+    conn.execute(f"CREATE OR REPLACE TABLE {target} AS\n{query}")
+
+    n = conn.execute(f"SELECT COUNT(*) FROM {target}").fetchone()[0]
+    print(f"Combined {len(tables)} tables into {target}: {n:,} rows")
+
+    if drop_sources:
+        for t in tables:
+            conn.execute(f'DROP TABLE {source_schema}."{t}"')
+        print(f"Dropped {len(tables)} source tables")
 
     conn.close()
 
 
 if __name__ == "__main__":
-    # params = build_request(
-    #                 sector="ECONOMICS", year=2002, agg_level_desc="STATE", state_name="VERMONT"
-    #             )
-    
-    # count = get_record_count(params)
-
-    # table_name = get_table_name(count_url, params)
-
-    # print(get_NASS_data(get_url, count, params, table_name))
-
-    
     northeast_states = [
         "CONNECTICUT",
         "MASSACHUSETTS",
@@ -146,17 +178,18 @@ if __name__ == "__main__":
         "RHODE ISLAND",
     ]
 
-    for year in [2002, 2007, 2012, 2017, 2022]:
-        for state in northeast_states:
-            params = build_request(
-                                sector="ECONOMICS", 
-                                year=year, 
-                                agg_level_desc="STATE", 
-                                state_name=state
-                            )
-            count = get_record_count(count_url, params)
-            table_name = get_table_name(params)
+    # for year in [2002, 2007, 2012, 2017, 2022]:
+    #     for state in northeast_states:
+    #         params = build_request(
+    #                             sector="ECONOMICS", 
+    #                             year=year, 
+    #                             agg_level_desc="STATE", 
+    #                             state_name=state
+    #                         )
+    #         count = get_record_count(count_url, params)
+    #         table_name = get_table_name(params)
             
-            print(get_NASS_data(get_url, count, params, table_name))
-            build_NASS_table(get_url, params, table_name, count)
-            time.sleep(.5)
+    #         build_NASS_tables(get_url, params, table_name, count)
+    #         time.sleep(.5)
+
+    combine_nass_tables(name_prefix="census_economics")

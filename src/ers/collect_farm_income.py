@@ -77,7 +77,4 @@ if __name__ == "__main__":
             df = pd.read_csv(f, dtype=str, encoding="cp1252")
         load_to_duckdb(df, clean_name(name), release_date, url)
 
-    see_tables(show_columns=False)
-
-
 
