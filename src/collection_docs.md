@@ -1,3 +1,6 @@
+# Agricultural data collection
+Automate data collection for ag data through APIs, web-scraping and bulk downloading. The goal of this work is to create a resuable data-pipeline to be used by Vermont Data Collaborative.
+
 # Collection Scripts
 - `collect_nass.py`
 - `collect_farm_income.py`
@@ -5,11 +8,12 @@
 ---
 
 # 1. `collect_nass.py`
-<summary>This script uses the publically available NASS API to collect NASS census data. This API does not have built in pagination, so currently to prevent rate limiting looping is used to make more specified requests. </summary>
+<summary>
+This script uses the publically available NASS API to collect NASS census data. This API does not have built in pagination, so currently to prevent rate limiting looping is used to make more specified requests.
+</summary>
 
 ---
-ex. loop through all of the Northeast States and available years(census data is collected every 5 years) and create a table in the db for each state/year pair. NASS has a selection of sectors, which can be specified when 
-ex. of usage here:
+An example of this would be to loop through all of the Northeast States and available years(census data is collected every 5 years) and create a table in the db for each state/year pair. When requesting data from the API, sector is the highest level parameter, and usually must be specified in order to keep the requests below the 50,000 row limit. Sectors include ['ANIMALS & PRODUCTS', 'CROPS', 'DEMOGRAPHICS', 'ECONOMICS', 'ENVIRONMENTAL']. The sector specified in this example is ECONOMICS.
 
 ```
  for year in [2002, 2007, 2012, 2017, 2022]:

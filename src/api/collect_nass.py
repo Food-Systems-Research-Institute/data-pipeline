@@ -166,8 +166,6 @@ def combine_nass_tables(
 
 
 if __name__ == "__main__":
-
-
     northeast_states = [
         "CONNECTICUT",
         "MASSACHUSETTS",

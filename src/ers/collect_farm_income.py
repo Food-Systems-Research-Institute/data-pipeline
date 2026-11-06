@@ -1,3 +1,7 @@
+'''
+Finds and downloads the latest release of ERS farm income data from the USDA website,
+and loads into duckDB as one table
+'''
 import io
 import re
 import zipfile
@@ -14,8 +18,8 @@ from bs4 import BeautifulSoup
 
 PAGE = ("https://www.ers.usda.gov/data-products/farm-income-and-wealth-statistics/"
         "data-files-us-and-state-level-farm-income-and-wealth-statistics")
-HEADERS = {"User-Agent": "vt-data-colab (contact: sshienbr@uvm.edu)"}
 
+HEADERS = {"User-Agent": "vt-data-colab (contact: sshienbr@uvm.edu)"}   
 
 con = db.connect("agData.duckDB")
 
@@ -71,10 +75,11 @@ if __name__ == "__main__":
     z = download_zip(url)
 
     for name in z.namelist():
+        print(name)
         if not name.lower().endswith(".csv"):
             continue
         with z.open(name) as f:
             df = pd.read_csv(f, dtype=str, encoding="cp1252")
-        load_to_duckdb(df, clean_name(name), release_date, url)
+        #load_to_duckdb(df, clean_name(name), release_date, url)
 
 
