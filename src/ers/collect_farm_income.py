@@ -70,7 +70,7 @@ def clean_name(filename: str) -> str:
     return "ers_farm_income_" + re.sub(r"\W+", "_", stem).strip("_").lower()
 
 
-if __name__ == "__main__":
+def run_collect():
     release_date, url = latest_release(PAGE)
     z = download_zip(url)
 
@@ -80,6 +80,11 @@ if __name__ == "__main__":
             continue
         with z.open(name) as f:
             df = pd.read_csv(f, dtype=str, encoding="cp1252")
-        #load_to_duckdb(df, clean_name(name), release_date, url)
+        load_to_duckdb(df, clean_name(name), release_date, url)
+
+
+
+if __name__ == "__main__":
+    run_collect()
 
 

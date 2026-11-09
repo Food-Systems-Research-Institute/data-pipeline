@@ -1,6 +1,7 @@
 # NASS API Data Collection Script
 import os
 import time
+import re
 
 import duckdb as db
 import pandas as pd
@@ -9,9 +10,12 @@ from dotenv import load_dotenv
 
 from utils import find_project_root
 
+
+
 PROJECT_DIR = find_project_root()
 load_dotenv(PROJECT_DIR / ".env")
 API_KEY = os.getenv("NASS_API_KEY")
+DB_PATH = PROJECT_DIR / "agData.duckdb"
 
 if API_KEY is None:
     print("API key not found")
@@ -66,7 +70,24 @@ def get_table_name(params: dict) -> str:
         params.get("year"),
         params.get("state_name"),
     ]
-    return "_".join(str(p) for p in parts if p).replace(" ", "_").lower()
+    skip = {"key", "format", "source_desc", "sector_desc", "year", "state_name"}
+
+    for k in sorted(params):
+        if k in skip:
+            continue
+        if k == "agg_level_desc" and params[k] == "STATE":
+            continue  
+        parts.append(params[k])
+
+    table_pieces = []
+    for p in parts:
+        if p not in (None, ""):
+            table_pieces.append(p)
+
+    table_name = ("_").join(table_pieces)
+
+            
+    return re.sub(r"\W+", "_", table_name).strip("_").lower()
         
 
 
@@ -104,7 +125,7 @@ def build_NASS_table(
         print("build table failed, request was too large or invalid request")
         return
 
-    conn = db.connect("agData.duckdb")
+    conn = db.connect(DB_PATH)
     conn.execute("""
             CREATE SCHEMA IF NOT EXISTS raw_nass
             """)
@@ -124,7 +145,7 @@ def combine_nass_tables(
     target: str = "raw_nass_combined.nass_all",
     name_prefix: str = "",
     drop_sources: bool = False,
-    db_path: str = "agData.duckdb",
+    db_path: str = DB_PATH,
 ) -> None:
     conn = db.connect(db_path)
 
@@ -164,33 +185,35 @@ def combine_nass_tables(
 
     conn.close()
 
+NORTHEAST = [
+            "CONNECTICUT", "MASSACHUSETTS", "NEW HAMPSHIRE", "VERMONT", "MAINE",
+            "NEW YORK", "PENNSYLVANIA", "NEW JERSEY", "RHODE ISLAND",
+            ]
+
+
+def collect_nass(source, sector, years, states=NORTHEAST, **filters):
+    filters.setdefault("agg_level_desc", "STATE")
+    ct = 0
+
+    for year in years:
+        for state in states:
+            try:
+                params = build_request(source, sector, year=year,
+                                       state_name=state, **filters)
+                count = get_record_count(count_url, params)
+                if count == 0:
+                    print(f"no data: {state} {year}")
+                    continue
+                table_name = get_table_name(params)
+                build_NASS_table(get_url, params, table_name, count)
+            except Exception as e:
+                ct += 1
+                print(f"FAILED {state} {year}: {type(e).__name__}")
+                if ct == 10:
+                    print("failed ten in a row requests, ending collection")
+                    break
+            time.sleep(0.5)
+
 
 if __name__ == "__main__":
-    northeast_states = [
-        "CONNECTICUT",
-        "MASSACHUSETTS",
-        "NEW HAMPSHIRE",
-        "VERMONT",
-        "MAINE",
-        "NEW YORK",
-        "PENNSYLVANIA",
-        "NEW JERSEY",
-        "RHODE ISLAND",
-    ]
-
-    for year in range(1997, 2025 + 1):
-        for state in northeast_states:
-            params = build_request(
-                                source="CENSUS",
-                                sector="ECONOMICS", 
-                                year=year, 
-                                agg_level_desc="STATE", 
-                                state_name=state
-                            )
-            count = get_record_count(count_url, params)
-            table_name = get_table_name(params)
-            
-            build_NASS_table(get_url, params, table_name, count)
-            time.sleep(.5)
-
-    #combine_nass_tables(name_prefix="census_economics")
+        collect_nass("CENSUS", "ECONOMICS", years=[1997, 2002, 2007, 2012, 2017, 2022])
