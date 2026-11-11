@@ -1,7 +1,7 @@
 from functools import cache
 from pathlib import Path
-import duckdb as db
 
+import duckdb as db
 import pandas as pd
 
 
