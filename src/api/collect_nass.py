@@ -193,7 +193,6 @@ NORTHEAST = [
 
 def collect_nass(source, sector, years, states=NORTHEAST, **filters):
     filters.setdefault("agg_level_desc", "STATE")
-    ct = 0
 
     for year in years:
         for state in states:
@@ -207,11 +206,7 @@ def collect_nass(source, sector, years, states=NORTHEAST, **filters):
                 table_name = get_table_name(params)
                 build_NASS_table(get_url, params, table_name, count)
             except Exception as e:
-                ct += 1
                 print(f"FAILED {state} {year}: {type(e).__name__}")
-                if ct == 10:
-                    print("failed ten in a row requests, ending collection")
-                    break
             time.sleep(0.5)
 
 
