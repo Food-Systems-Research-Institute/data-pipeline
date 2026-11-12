@@ -1,2 +1,4 @@
 agData.duckdb filter=lfs diff=lfs merge=lfs -text
 *.duckdb filter=lfs diff=lfs merge=lfs -text
+smdata_migration/spatial/2025_cultivated_layer/2025_cultivated_layer.tif filter=lfs diff=lfs merge=lfs -text
+smdata_migration/spatial/cdl_ne.tif filter=lfs diff=lfs merge=lfs -text
