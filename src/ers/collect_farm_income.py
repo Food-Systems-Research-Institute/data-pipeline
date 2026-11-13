@@ -1,7 +1,8 @@
-'''
+"""
 Finds and downloads the latest release of ERS farm income data from the USDA website,
 and loads into duckDB as one table
-'''
+"""
+
 import io
 import re
 import zipfile
@@ -15,22 +16,26 @@ import requests
 from bs4 import BeautifulSoup
 
 
+PAGE = (
+    "https://www.ers.usda.gov/data-products/farm-income-and-wealth-statistics/"
+    "data-files-us-and-state-level-farm-income-and-wealth-statistics"
+)
 
-PAGE = ("https://www.ers.usda.gov/data-products/farm-income-and-wealth-statistics/"
-        "data-files-us-and-state-level-farm-income-and-wealth-statistics")
-
-HEADERS = {"User-Agent": "vt-data-colab (contact: sshienbr@uvm.edu)"}   
+HEADERS = {"User-Agent": "vt-data-colab (contact: sshienbr@uvm.edu)"}
 
 con = db.connect("agData.duckDB")
 
 RELEASE_RE = re.compile(r"([A-Z][a-z]+ \d{1,2}, \d{4}) release")
+
 
 def latest_release(page_url: str):
     resp = requests.get(page_url, headers=HEADERS, timeout=60)
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "html.parser")
 
-    h2 = soup.find("h2", string = lambda s: s and s.strip().startswith("Download All Data"))
+    h2 = soup.find(
+        "h2", string=lambda s: s and s.strip().startswith("Download All Data")
+    )
     if h2 is None:
         raise RuntimeError("'Download All Data' heading not found; page layout changed")
     ul = h2.find_next_sibling("ul")
@@ -44,7 +49,7 @@ def latest_release(page_url: str):
 
     if not releases:
         raise RuntimeError("Heading found but no release links parsed")
-    return max(releases) # release date and url
+    return max(releases)  # release date and url
 
 
 def download_zip(url: str) -> zipfile.ZipFile:
@@ -83,8 +88,5 @@ def run_collect():
         load_to_duckdb(df, clean_name(name), release_date, url)
 
 
-
 if __name__ == "__main__":
     run_collect()
-
-

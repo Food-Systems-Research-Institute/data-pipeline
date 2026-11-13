@@ -1,5 +1,5 @@
 # Agricultural data collection
-Automate data collection for ag data through APIs, web-scraping and bulk downloading. The goal of this work is to create a resuable data-pipeline to be used by Vermont Data Collaborative.
+Automate data collection of ag data through APIs, web-scraping and bulk downloading. The goal of this work is to create a resuable data-pipeline to be used by Vermont Data Collaborative.
 
 # Collection Scripts
 - `collect_nass.py`
@@ -9,11 +9,11 @@ Automate data collection for ag data through APIs, web-scraping and bulk downloa
 ---
 
 # 1. `collect_nass.py` 
-This script uses the publically available NASS API to collect NASS census and survey data. Use `collect_nass()` to run this script. This API does not have built in pagination, so currently to prevent rate limiting, use further querying. Adding parameters to collect nass will create an individuala request for each item in the category. For example, you can specify the sector, which is one of five options(see example where sector is economics). I have provided the ability to do so in the `collect_nass` function.
+This script uses the publically available NASS API to collect NASS census and survey data. Use `collect_nass()` to run this script. This API does not have built in pagination, so currently to prevent rate limiting, use further querying. Adding parameters to collect nass will create an individual request for each item in the category. For example, you can specify the sector, which is one of five options(see example where sector is economics). The ability to do so is provided in the `collect_nass` function.
 
 ---
 
-### Example below ⬇️. Collect census economics data for each of the years and each state in the northeast. This will create an individual table for each year state pair, and when complete will union all tables into one. State is the default, but can change to county. 
+### Example below ⬇️. Collect census economics data for each census year and each state in the northeast. This will create an individual table for each year/state pair, and when complete will union all tables into one. Aggregation by state is the default, but can change to county. 
 
 #### See `nass_api_parameters.csv` for more query options. 
 
@@ -23,7 +23,7 @@ This script uses the publically available NASS API to collect NASS census and su
 
 # 2. `collect_farm_income.py`
 
-Scrapes ers farm income download page for the latest release and loads it into `agData.db`. Run using `run_collect()`
+Scrapes ers farm income download page for the latest release and loads it into `agData.duckdb`. Run using `run_collect()`
 
 ---
 

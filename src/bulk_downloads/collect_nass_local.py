@@ -29,13 +29,8 @@ def load_to_db(filepath, table_name):
     cursor.close()
     conn.close()
     print(f"Loaded {filepath} into {table_name}")
-        
 
 
 if __name__ == "__main__":
     FILE_PATH, TABLE_NAME = get_file_path_and_table_name()
     load_to_db(FILE_PATH, TABLE_NAME)
-
-
-    
-    

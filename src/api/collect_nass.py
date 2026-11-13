@@ -1,7 +1,7 @@
 # NASS API Data Collection Script
 import os
-import time
 import re
+import time
 
 import duckdb as db
 import pandas as pd
@@ -9,8 +9,6 @@ import requests
 from dotenv import load_dotenv
 
 from utils import find_project_root
-
-
 
 PROJECT_DIR = find_project_root()
 load_dotenv(PROJECT_DIR / ".env")
@@ -32,7 +30,7 @@ Params = dict[str, str | int | None]
 
 # gets the categories for the descriptive parameters as a list
 # (ex. param is source_desc, output is ['ANIMALS & PRODUCTS', 'CROPS', 'DEMOGRAPHICS', 'ECONOMICS', 'ENVIRONMENTAL'])
-def getParams(param_url: str, key_word: str) -> list[str]:
+def get_params(param_url: str, key_word: str) -> list[str]:
     param_params = {"key": API_KEY, "param": key_word}
 
     param_response = requests.get(param_url, params=param_params, timeout=60)
@@ -45,14 +43,14 @@ def getParams(param_url: str, key_word: str) -> list[str]:
 
 def build_request(source: str, sector: str, **kwargs: str | int) -> Params:
     params: Params = {
-            "key": API_KEY,
-            "format": "JSON",
-            "source_desc": source,
-            "sector_desc": sector,
-            }
+        "key": API_KEY,
+        "format": "JSON",
+        "source_desc": source,
+        "sector_desc": sector,
+    }
 
     for key, value in kwargs.items():
-            params[key] = value
+        params[key] = value
 
     return params
 
@@ -61,7 +59,7 @@ def get_record_count(count_url, params: dict) -> int:
     response = requests.get(count_url, params=params, timeout=60)
 
     return int(response.json()["count"])
-    
+
 
 def get_table_name(params: dict) -> str:
     parts = [
@@ -76,7 +74,7 @@ def get_table_name(params: dict) -> str:
         if k in skip:
             continue
         if k == "agg_level_desc" and params[k] == "STATE":
-            continue  
+            continue
         parts.append(params[k])
 
     table_pieces = []
@@ -86,9 +84,7 @@ def get_table_name(params: dict) -> str:
 
     table_name = ("_").join(table_pieces)
 
-            
     return re.sub(r"\W+", "_", table_name).strip("_").lower()
-        
 
 
 # Get raw data from NASS API based on the specified parameters
@@ -98,7 +94,6 @@ def get_NASS_data(
     if row_count > 50000:
         raise ValueError(f"Request too large ({row_count} rows), try further filtering")
 
-    
     response = requests.get(get_url, params=params, timeout=60)
     print("Status code:", response.status_code)
 
@@ -119,7 +114,6 @@ def build_NASS_table(
     get_url: str, params: Params, table_name: str, row_count: int
 ) -> None:
     raw_data = get_NASS_data(get_url, row_count, params, table_name)
-
 
     if raw_data is None:
         print("build table failed, request was too large or invalid request")
@@ -168,8 +162,7 @@ def combine_nass_tables(
         raise RuntimeError(f"No tables found in {source_schema}")
 
     selects = [
-        f"SELECT *, '{t}' AS source_table FROM {source_schema}.\"{t}\""
-        for t in tables
+        f"SELECT *, '{t}' AS source_table FROM {source_schema}.\"{t}\"" for t in tables
     ]
     query = "\nUNION ALL BY NAME\n".join(selects)
 
@@ -185,10 +178,18 @@ def combine_nass_tables(
 
     conn.close()
 
+
 NORTHEAST = [
-            "CONNECTICUT", "MASSACHUSETTS", "NEW HAMPSHIRE", "VERMONT", "MAINE",
-            "NEW YORK", "PENNSYLVANIA", "NEW JERSEY", "RHODE ISLAND",
-            ]
+    "CONNECTICUT",
+    "MASSACHUSETTS",
+    "NEW HAMPSHIRE",
+    "VERMONT",
+    "MAINE",
+    "NEW YORK",
+    "PENNSYLVANIA",
+    "NEW JERSEY",
+    "RHODE ISLAND",
+]
 
 
 def collect_nass(source, sector, years, states=NORTHEAST, **filters):
@@ -197,18 +198,19 @@ def collect_nass(source, sector, years, states=NORTHEAST, **filters):
     for year in years:
         for state in states:
             try:
-                params = build_request(source, sector, year=year,
-                                       state_name=state, **filters)
+                params = build_request(
+                    source, sector, year=year, state_name=state, **filters
+                )
                 count = get_record_count(count_url, params)
                 if count == 0:
                     print(f"no data: {state} {year}")
                     continue
                 table_name = get_table_name(params)
                 build_NASS_table(get_url, params, table_name, count)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 print(f"FAILED {state} {year}: {type(e).__name__}")
             time.sleep(0.5)
 
 
 if __name__ == "__main__":
-        collect_nass("CENSUS", "ECONOMICS", years=[1997, 2002, 2007, 2012, 2017, 2022])
+    collect_nass("CENSUS", "ECONOMICS", years=[1997, 2002, 2007, 2012, 2017, 2022])

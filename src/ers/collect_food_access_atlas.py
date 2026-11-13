@@ -64,7 +64,9 @@ def read_csv_bytes(data: bytes) -> pd.DataFrame:
     raise ValueError("Could not decode CSV")
 
 
-def load_to_duckdb(df: pd.DataFrame, table_name: str, dataset: str, source_url: str) -> None:
+def load_to_duckdb(
+    df: pd.DataFrame, table_name: str, dataset: str, source_url: str
+) -> None:
     df = df.copy()
     df["dataset"] = dataset
     df["source_url"] = source_url
