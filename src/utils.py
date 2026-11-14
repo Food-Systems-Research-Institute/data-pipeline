@@ -1,5 +1,6 @@
 from functools import cache
 from pathlib import Path
+import duckdb as db
 
 import pandas as pd
 
@@ -58,3 +59,57 @@ def fips_key() -> pd.DataFrame:
     df["state_code"] = df["state_code"].fillna(df["state_name"].map(state_map))
 
     return df
+
+def see_tables(schema: str | None = None, show_columns: bool = False):
+    conn = db.connect("agData.duckdb")
+
+    # One row per table, with its column count
+    query = """
+        SELECT schema_name, table_name, column_count
+        FROM duckdb_tables()
+    """
+    params = []
+    if schema:
+        query += " WHERE schema_name = ?"
+        params.append(schema)
+    query += " ORDER BY schema_name, table_name"
+
+    tables = conn.execute(query, params).df()
+
+    # Exact row counts (loops, so fine for a small database)
+    row_counts = []
+    for s, t in zip(tables["schema_name"], tables["table_name"]):
+        n = conn.execute(f'SELECT COUNT(*) FROM "{s}"."{t}"').fetchone()[0]
+        row_counts.append(n)
+    tables["row_count"] = row_counts
+
+    with pd.option_context("display.max_rows", None,
+                           "display.max_columns", None,
+                           "display.width", 200,
+                           "display.max_colwidth", None):
+        print(tables)
+
+        if show_columns:
+            for s, t in zip(tables["schema_name"], tables["table_name"]):
+                cols = conn.execute(
+                    """
+                    SELECT column_name, data_type
+                    FROM information_schema.columns
+                    WHERE table_schema = ? AND table_name = ?
+                    ORDER BY ordinal_position
+                    """,
+                    [s, t],
+                ).df()
+                print(f"\n{s}.{t}")
+                print(cols.to_string(index=False))
+
+    conn.close()
+
+
+
+
+
+
+
+
+               

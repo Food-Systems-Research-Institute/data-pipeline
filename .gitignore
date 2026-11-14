@@ -8,10 +8,9 @@ __pycache__/
 
 .DS_Store
 
-*.duckdb
-*.duckdb.wal
+
 *.db
 *.sqlite
 *.sqlite3
 
-data/raw/nass/
+data/raw/

@@ -1,4 +1,5 @@
 # Data Pipeline
+NASS Quick Stats data is very broad, with tons of slightly varying categories of data even within specific sectors and groups. The goal of this pipeline is to collect and clean specific data to be used by [vt-data-colab](https://github.com/VERSO-UVM/react-vt-data/blob/main/docs/architecture/etl.md).
 
 ## Development
 
@@ -32,7 +33,7 @@ git push
 Get a NASS API Key for free at https://quickstats.nass.usda.gov/api. Add to `.env` as `NASS_API_KEY`. Then:
 
 ```sh
-uv run python src/api/collect_nass_economics.py
+uv run python src/api/collect_nass.py
 ```
 
 ## DuckDB Schema
@@ -50,6 +51,6 @@ duckdb agData.duckdb
 DESCRIBE fips.fips_key;
 ```
 
-## Contributions
+## Contributions    
 
 Format with [Ruff](https://astral.sh/ruff), lint with [ty](https://docs.astral.sh/ty/).

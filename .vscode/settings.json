@@ -16,6 +16,11 @@
             "path": "/Users/sethsmac/Desktop/FSRIInternship/USDA_Data_Pipeline/agData.duckdb",
             "attached": true
         }
-    ]
+    ],
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
     
 }
