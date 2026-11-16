@@ -8,13 +8,11 @@ import re
 import zipfile
 from datetime import datetime
 from urllib.parse import urljoin
-from utils import see_tables
 
 import duckdb as db
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-
 
 PAGE = (
     "https://www.ers.usda.gov/data-products/farm-income-and-wealth-statistics/"
@@ -58,7 +56,7 @@ def download_zip(url: str) -> zipfile.ZipFile:
     return zipfile.ZipFile(io.BytesIO(resp.content))
 
 
-def load_to_duckdb(df: pd.DataFrame, table_name: str, release_date, source_url: str):
+def load_to_duckdb(df: pd.DataFrame, table_name: str, release_date, source_url: str) -> None:
     df = df.copy()
     df["release_date"] = release_date.date().isoformat()
     df["source_url"] = source_url

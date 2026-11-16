@@ -29,7 +29,8 @@ Params = dict[str, str | int | None]
 
 
 # gets the categories for the descriptive parameters as a list
-# (ex. param is source_desc, output is ['ANIMALS & PRODUCTS', 'CROPS', 'DEMOGRAPHICS', 'ECONOMICS', 'ENVIRONMENTAL'])
+#useful if unable to access usda website
+# (ex. param is sector_desc, output is ['ANIMALS & PRODUCTS', 'CROPS', 'DEMOGRAPHICS', 'ECONOMICS', 'ENVIRONMENTAL'])
 def get_params(param_url: str, key_word: str) -> list[str]:
     param_params = {"key": API_KEY, "param": key_word}
 
@@ -80,7 +81,7 @@ def get_table_name(params: dict) -> str:
     table_pieces = []
     for p in parts:
         if p not in (None, ""):
-            table_pieces.append(p)
+            table_pieces.append(str(p))
 
     table_name = ("_").join(table_pieces)
 
@@ -89,13 +90,16 @@ def get_table_name(params: dict) -> str:
 
 # Get raw data from NASS API based on the specified parameters
 def get_NASS_data(
-    get_url: str, row_count: int, params: Params, table_name: str
+    get_url: str, params: Params, table_name: str
 ) -> pd.DataFrame | None:
-    if row_count > 50000:
-        raise ValueError(f"Request too large ({row_count} rows), try further filtering")
+
 
     response = requests.get(get_url, params=params, timeout=60)
     print("Status code:", response.status_code)
+
+    if response.status_code == 413:
+        print(f"TOO LARGE: {table_name}, split by group_desc")
+        return None
 
     if response.status_code != 200:
         print(f"Request failed for {table_name}: {response.text[:500]}")
@@ -111,9 +115,8 @@ def get_NASS_data(
 
 
 def build_NASS_table(
-    get_url: str, params: Params, table_name: str, row_count: int
-) -> None:
-    raw_data = get_NASS_data(get_url, row_count, params, table_name)
+    get_url: str, params: Params, table_name: str) -> None:
+    raw_data = get_NASS_data(get_url, params, table_name)
 
     if raw_data is None:
         print("build table failed, request was too large or invalid request")
@@ -139,8 +142,9 @@ def combine_nass_tables(
     target: str = "raw_nass_combined.nass_all",
     name_prefix: str = "",
     drop_sources: bool = False,
-    db_path: str = DB_PATH,
+    db_path: str = DB_PATH
 ) -> None:
+    
     conn = db.connect(db_path)
 
     target_schema = target.split(".")[0]
@@ -179,6 +183,54 @@ def combine_nass_tables(
     conn.close()
 
 
+def collect_nass(source, 
+                 years, 
+                 sectors, 
+                 states, 
+                 dry_run=True, 
+                 combine_tables=False,
+                 drop_sources=False,
+                 **filters) -> None:
+    
+    filters.setdefault("agg_level_desc", "STATE")
+    for sector in sectors:
+        for year in years:
+            for state in states:
+                try:
+                    params = build_request(
+                        source, sector, year=year, state_name=state, **filters
+                    )
+                    
+                    table_name = get_table_name(params)
+
+                    if dry_run:
+                        count = get_record_count(count_url, params)
+
+                        if count == 0:
+                            print(f"no data: {sector} {state} {year}")
+                            continue
+                        if count > 50000:
+                            print(f"TOO LARGE ({count}): {sector} {state} {year}")
+                            continue
+                        print(f"OK ({count}): {sector} {state} {year}")
+                    else:
+                        build_NASS_table(get_url, params, table_name)
+                except Exception as e:
+                        print(f"FAILED {sector} {state} {year}: {type(e).__name__}: {e}")
+                time.sleep(2)
+    if combine_tables:
+        combine_nass_tables(source_schema = "raw_nass",
+            target = "raw_nass_combined.nass_all",
+            name_prefix = "",
+            drop_sources = drop_sources,
+            db_path = DB_PATH)
+
+
+SECTORS = ['ANIMALS & PRODUCTS', 
+           'CROPS', 
+           'DEMOGRAPHICS', 
+           'ECONOMICS', 
+           'ENVIRONMENTAL']
 NORTHEAST = [
     "CONNECTICUT",
     "MASSACHUSETTS",
@@ -192,25 +244,9 @@ NORTHEAST = [
 ]
 
 
-def collect_nass(source, sector, years, states=NORTHEAST, **filters):
-    filters.setdefault("agg_level_desc", "STATE")
-
-    for year in years:
-        for state in states:
-            try:
-                params = build_request(
-                    source, sector, year=year, state_name=state, **filters
-                )
-                count = get_record_count(count_url, params)
-                if count == 0:
-                    print(f"no data: {state} {year}")
-                    continue
-                table_name = get_table_name(params)
-                build_NASS_table(get_url, params, table_name, count)
-            except Exception as e:  # noqa: BLE001
-                print(f"FAILED {state} {year}: {type(e).__name__}")
-            time.sleep(0.5)
-
-
 if __name__ == "__main__":
-    collect_nass("CENSUS", "ECONOMICS", years=[1997, 2002, 2007, 2012, 2017, 2022])
+    #collect_nass("CENSUS", "ECONOMICS", years=[1997, 2002, 2007, 2012, 2017, 2022])
+    collect_nass("CENSUS", years=[1997, 2002, 2007, 2012, 2017, 2022], sectors=SECTORS, states=NORTHEAST, dry_run=False, combine_tables=True, drop_sources=True)
+    #collect_nass("CENSUS", years=[2022], sectors=["CROPS"], states=NORTHEAST, dry_run=True, combine_tables=False, drop_sources=False)
+
+    #get_params(param_url, key_word="group_desc")
