@@ -2,6 +2,7 @@
 import os
 import re
 import time
+from pathlib import Path
 
 import duckdb as db
 import pandas as pd
@@ -142,7 +143,7 @@ def combine_nass_tables(
     target: str = "raw_nass_combined.nass_all",
     name_prefix: str = "",
     drop_sources: bool = False,
-    db_path: str = DB_PATH
+    db_path: Path = DB_PATH
 ) -> None:
     
     conn = db.connect(db_path)
@@ -230,7 +231,9 @@ SECTORS = ['ANIMALS & PRODUCTS',
            'CROPS', 
            'DEMOGRAPHICS', 
            'ECONOMICS', 
-           'ENVIRONMENTAL']
+           'ENVIRONMENTAL'
+           ]
+
 NORTHEAST = [
     "CONNECTICUT",
     "MASSACHUSETTS",
@@ -241,7 +244,7 @@ NORTHEAST = [
     "PENNSYLVANIA",
     "NEW JERSEY",
     "RHODE ISLAND",
-]
+    ]
 
 
 if __name__ == "__main__":

@@ -5,6 +5,7 @@ Automate data collection of ag data through APIs, web-scraping and bulk download
 - `collect_nass.py`
 - `collect_farm_income.py`
 - `collect_food_access_atlas.py`
+- `collect_feeding_america.py`
 
 ---
 
@@ -27,7 +28,7 @@ Scrapes ers farm income download page for the latest release and loads it into `
 
 ---
 
-# 3. `collect_food_access_atlas`
+# 3. `collect_food_access_atlas.py`
 same as `collect_farm_income.py` except more tables are collected.
 They include:
 - `ers_food_access_2019_food_access_research_atlas`
@@ -40,5 +41,7 @@ They include:
 - `ers_food_access_2025_sram_variable_lookup_general_tract_characteristics`
 - `ers_food_access_2025_sram_variable_lookup_straight_line_distance` 
 
+# 4. `collect_feeding_america.py`
 
+request data from `https://feedingamerica.az1.qualtrics.com/jfe/form/SV_5tJt5m9K62hRC6N` and put the unzipped folder into data/raw/
 

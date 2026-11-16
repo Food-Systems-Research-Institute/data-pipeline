@@ -105,6 +105,8 @@ def see_tables(schema: str | None = None, show_columns: bool = False):
 
     conn.close()
 
+# def load_to_duckdb_flexible(df: pd.DataFrame, schema: str, ) -> None:
+
 
 
 
