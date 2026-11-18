@@ -139,14 +139,14 @@ def build_NASS_table(
 
 
 def combine_nass_tables(
+    years: list,
     source_schema: str = "raw_nass",
     target: str = "raw_nass_combined.nass_all",
     name_prefix: str = "",
-    drop_sources: bool = False,
-    db_path: Path = DB_PATH
+    drop_sources: bool = False
 ) -> None:
     
-    conn = db.connect(db_path)
+    conn = db.connect(DB_PATH)
 
     target_schema = target.split(".")[0]
     conn.execute(f"CREATE SCHEMA IF NOT EXISTS {target_schema}")
@@ -171,9 +171,21 @@ def combine_nass_tables(
     ]
     query = "\nUNION ALL BY NAME\n".join(selects)
 
+    start = str(years[0])
+
+    end = str(years[-1])
+
+    target = target + f"_{start}_" + end
+
     conn.execute(f"CREATE OR REPLACE TABLE {target} AS\n{query}")
 
-    n = conn.execute(f"SELECT COUNT(*) FROM {target}").fetchone()[0]
+    result = conn.execute(f"SELECT COUNT(*) FROM {target}").fetchone()
+
+    if result is not None:
+        n = result[0]
+    else:
+        n = 0
+
     print(f"Combined {len(tables)} tables into {target}: {n:,} rows")
 
     if drop_sources:
@@ -184,10 +196,29 @@ def combine_nass_tables(
     conn.close()
 
 
-def collect_nass(source, 
-                 years, 
-                 sectors, 
-                 states, 
+SECTORS = ['ANIMALS & PRODUCTS', 
+           'CROPS', 
+           'DEMOGRAPHICS', 
+           'ECONOMICS', 
+           'ENVIRONMENTAL'
+           ]
+
+NORTHEAST = [
+    "CONNECTICUT",
+    "MASSACHUSETTS",
+    "NEW HAMPSHIRE",
+    "VERMONT",
+    "MAINE",
+    "NEW YORK",
+    "PENNSYLVANIA",
+    "NEW JERSEY",
+    "RHODE ISLAND",
+    ]
+
+def collect_nass(years, 
+                 source = "CENSUS", 
+                 sectors = SECTORS, 
+                 states = NORTHEAST, 
                  dry_run=True, 
                  combine_tables=False,
                  drop_sources=False,
@@ -216,15 +247,19 @@ def collect_nass(source,
                         print(f"OK ({count}): {sector} {state} {year}")
                     else:
                         build_NASS_table(get_url, params, table_name)
-                except Exception as e:
+                except (requests.RequestException, 
+                        requests.JSONDecodeError,
+                        KeyError, 
+                        ValueError, 
+                        db.Error) as e:
                         print(f"FAILED {sector} {state} {year}: {type(e).__name__}: {e}")
                 time.sleep(2)
     if combine_tables:
-        combine_nass_tables(source_schema = "raw_nass",
-            target = "raw_nass_combined.nass_all",
-            name_prefix = "",
-            drop_sources = drop_sources,
-            db_path = DB_PATH)
+        combine_nass_tables(years,
+                            source_schema = "raw_nass",
+                            target = "raw_nass_combined.nass_all",
+                            name_prefix = "",
+                            drop_sources = drop_sources)
 
 
 SECTORS = ['ANIMALS & PRODUCTS', 
@@ -248,8 +283,16 @@ NORTHEAST = [
 
 
 if __name__ == "__main__":
-    #collect_nass("CENSUS", "ECONOMICS", years=[1997, 2002, 2007, 2012, 2017, 2022])
-    collect_nass("CENSUS", years=[1997, 2002, 2007, 2012, 2017, 2022], sectors=SECTORS, states=NORTHEAST, dry_run=False, combine_tables=True, drop_sources=True)
-    #collect_nass("CENSUS", years=[2022], sectors=["CROPS"], states=NORTHEAST, dry_run=True, combine_tables=False, drop_sources=False)
+    # UNCOMMENT BELOW TO COLLECT ALL NASS CENSUS DATA
+    '''
+    collect_nass("CENSUS", 
+                 years=[1997, 2002, 2007, 2012, 2017, 2022], 
+                 sectors=SECTORS, 
+                 states=NORTHEAST, 
+                 dry_run=False, 
+                 combine_tables=True, 
+                 drop_sources=True)
+    '''
+    collect_nass(years=[2017, 2022], source = "CENSUS", sectors=["CROPS"], states=NORTHEAST, dry_run=False, combine_tables=True, drop_sources=True)
 
     #get_params(param_url, key_word="group_desc")

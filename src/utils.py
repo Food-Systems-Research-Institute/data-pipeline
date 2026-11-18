@@ -105,7 +105,10 @@ def see_tables(schema: str | None = None, show_columns: bool = False):
 
     conn.close()
 
-# def load_to_duckdb_flexible(df: pd.DataFrame, schema: str, ) -> None:
+
+def get_duckdb_path() -> Path:
+    PROJECT_DIR = find_project_root()
+    return PROJECT_DIR / "agData.duckdb"
 
 
 
